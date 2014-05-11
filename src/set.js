@@ -62,6 +62,35 @@ var Set = function(options) {
      */
     self.gain = function(attr) {
 
+        return new Promise(function(resolve, reject) {
+            var gain = 0;
+            var count = 0;
+            var maxCount = 0;
+
+            var handleS_v = function(entropySet) {
+                gain -= entropySet.sum / currentTotal * entropySet.entropy;
+                if (count >= maxCount)
+                    resolve(gain);
+                else
+                    count++;
+            }
+
+            var currentTotal = 0;
+            self.entropy()
+                .then(function(result) {
+                    currentTotal = result.sum;
+                    gain = result.entropy;
+                    return self.split(attr);
+                })
+                .then(function(sets) {
+                    maxCount = sets.length;
+                    _.each(sets, function(set) {
+                        set.entropy().then(function(result) {
+                            handleS_v(result);
+                        })
+                    })
+                }, reject)
+        })
     }
 
     /**
@@ -75,6 +104,7 @@ var Set = function(options) {
 
         return new Promise(function(resolve, reject) {
             var query = self.BuildSelectQuery("COUNT(class) as count_class");
+            query += " GROUP BY class;"
             database.execQuery({
                 stmt: query
             })
@@ -85,7 +115,10 @@ var Set = function(options) {
                     var E = _.reduce(result, function(subsum, entry) {
                         return subsum - ((entry.count_class / sum) * log2(entry.count_class / sum));
                     }, 0)
-                    resolve(E);
+                    resolve({
+                        entropy: E,
+                        sum: sum
+                    });
                 }).then(function() {}, reject)
         })
     }

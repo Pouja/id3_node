@@ -32,9 +32,10 @@ describe("Set", function() {
             });
             set.entropy()
                 .then(function(e) {
-                    e.should.be.a.Number.and.approximately(0, 0.001);
-                    done()
-                }, done)
+                    e.should.have.property("entropy");
+                    e.should.have.property("sum");
+                    e.entropy.should.be.a.Number.and.approximately(0, 0.001);
+                }).then(done, done);
         })
         it("should calculate the entropy correctly when there are two class", function(done) {
             var set = new Set({
@@ -52,7 +53,7 @@ describe("Set", function() {
             });
             set.entropy()
                 .then(function(e) {
-                    e.should.be.a.Number.and.approximately(0.94, 0.001);
+                    e.entropy.should.be.a.Number.and.approximately(0.94, 0.001);
                 }).then(done, done);
         })
     })
@@ -103,6 +104,11 @@ describe("Set", function() {
                 }).then(function() {
                     done()
                 }, done);
+        })
+    })
+    describe("#gain", function() {
+        it("should calculate the gain correctly", function(done) {
+            done()
         })
     })
 })

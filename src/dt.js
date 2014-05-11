@@ -45,7 +45,7 @@ var DecisionTree = function(options) {
      */
     var Run = function(node) {
         return new Promise(function(resolve, reject) {
-
+            resolve()
         })
     }
     return self;
