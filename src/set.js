@@ -22,7 +22,12 @@ var Set = function(options) {
 
     var queryString = "SELECT 1;"
     var filters = options.filters.slice(0);
+    var attrs = options.attrs.slice(0);
     var database = options.db;
+
+    self.getAttrs = function() {
+        return attrs.slice(0);
+    }
 
     self.getFilters = function() {
         return filters.slice(0);
@@ -41,6 +46,9 @@ var Set = function(options) {
     }
 
     self.AddFilter = function(filter) {
+        attrs = _.filter(attrs, function(attr) {
+            return attr != filter.attr;
+        })
         filters.push(filter);
         BuildQuery();
     }
