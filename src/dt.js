@@ -1,6 +1,8 @@
-var Promise = require("promise");
+var Promise = require("bluebird");
 var TreeModel = require("tree-model");
 var Set = require("./set.js");
+var _ = require("underscore");
+var debug = require("debug")("dt");
 /**
  * The decision tree class.
  * @param {Object} options The options
@@ -37,10 +39,11 @@ var DecisionTree = function(options) {
         return new Promise(function(resolve, reject) {
             var set = new Set({
                 attrs: self.attrs,
-                filters: []
+                filters: [],
+                db: options.db
             });
             root = tree.parse(set);
-            return Run(tree);
+            return Run(root);
         }).then(resolve, reject);
     }
 
@@ -53,45 +56,51 @@ var DecisionTree = function(options) {
      */
     var Run = function(node) {
         return new Promise(function(resolve, reject) {
-            //called when all gains are calculated
-            var handleGains = function(gains) {
-                var sortedGains = _.sortBy(gains, function(g) {
-                    return g.gain;
-                });
-                sortedGains.reverse();
-
-                //split by the attribute with the highest gain
-                node.split(sortedGains[0].attr)
-                    .then(function(sets) {
-                        _.each(sets, function(set) {
-                            var childNode = tree.parse(set);
-                            node.addChild(childNode);
-
-                        })
-                    }, reject)
-            }
-
-            var count = 0;
-            var gains = [];
-
-            node.entropy()
+            //calc the entropy
+            node.model.entropy()
                 .then(function(e) {
                     if (e.entropy === 0)
-                        resolve()
+                        resolve(node)
                     else {
-                        _.each(node.getAttrs(), function(attr) {
-                            node.gain(attr)
-                                .then(function(g) {
-                                    gains.push({
-                                        gain: g,
-                                        attr: attr
-                                    });
-                                    count++;
-                                    if (count >= node.getAttrs().length)
-                                        handleGains(gains);
-                                }, reject)
+                        var fCalls = [];
+                        _.each(node.model.getAttrs(), function(attr) {
+                            fCalls.push(node.model.gain);
                         })
+
+                        //calc all the gains
+                        return Promise.all(fCalls);
                     }
+                }).then(function(results) {
+                    var gains = [];
+                    _.each(results, function(g) {
+                        gains.push({
+                            gain: g,
+                            attr: attr
+                        });
+                    })
+                    var sortedGains = _.sortBy(gains, function(g) {
+                        return g.gain;
+                    });
+                    sortedGains.reverse();
+                    //split by the attribute with the highest gain
+                    return node.model.split(sortedGains[0].attr)
+                }).then(function(sets) {
+                    var fCalls = [];
+                    _.each(sets, function(set) {
+                        var childNode = tree.parse(set);
+                        fCalls.push(function() {
+                            self.Run(childNode)
+                        })
+                    })
+                    //recursively call Run on each child node
+                    return Promise.all(fCalls);
+                }).then(function(childNodes) {
+                    //add each child node to this node
+                    _.each(childNodes, function(childNode) {
+                        node.addChild(childNode)
+                    })
+                    //resolve the node
+                    resolve(node);
                 }, reject)
         })
     }

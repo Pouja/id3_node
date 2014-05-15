@@ -14,10 +14,11 @@
     "debug": "~0.8.1",
     "node-gyp": "~0.13.0",
     "odbc": "~0.6.6",
-    "promise": "~5.0.0",
     "tree-model": "~0.4.1",
     "should": "~3.3.1",
-    "mocha": "~1.18.2"
+    "mocha": "~1.18.2",
+    "bluebird": "~1.2.4",
+    "jsonfile": "~1.1.1"
   },
   "devDependencies": {},
   "keywords": [

@@ -1,21 +1,21 @@
 var monetdb = new require("./monetdb.js")();
-var dt = new require("./dt.js")();
-var Set = require("./set.js");
+var DecisionTree = new require("./dt.js");
+var jf = require("jsonfile");
 
 var debug = require("debug")("app");
 
+var dt = new DecisionTree({
+    attrN: 28,
+    attrName: "attr",
+    db: monetdb
+})
+
 monetdb.connectDB()
     .then(function() {
-        var q = "SELECT min(attr1), max(attr2)";
-        for (var i = 1; i <= 28; i++)
-            q += ",min(attr" + i + "), max(" + i + ")";
-        q += " FROM data";
-        return monetdb.execQuery({
-            stmt: q
-        })
+        return dt.Run();
     })
     .then(function(result) {
-        console.log(result)
+        jf.writeFileSync("file.json", result);
         return monetdb.closeDB();
     })
     .then(function() {}, function(err) {

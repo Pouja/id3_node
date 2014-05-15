@@ -1,5 +1,5 @@
 var _ = require("underscore");
-var Promise = require("promise");
+var Promise = require("bluebird");
 var debug = require("debug")("set");
 
 /**
@@ -20,19 +20,31 @@ var Set = function(options) {
 
     var self = {};
 
+    //create private variables to prevent conflicts
     var queryString = "SELECT 1;"
     var filters = options.filters.slice(0);
     var attrs = options.attrs.slice(0);
     var database = options.db;
 
+    /**
+     * @return Array The attributes
+     * @method getAttrs
+     */
     self.getAttrs = function() {
         return attrs.slice(0);
     }
 
+    /**
+     * @return Array The filters
+     * @method getFilters
+     */
     self.getFilters = function() {
         return filters.slice(0);
     }
 
+    /**
+     * Builds the query
+     */
     var BuildQuery = function() {
         queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
         queryString = queryString.replace("<table>", options.table);
@@ -69,20 +81,7 @@ var Set = function(options) {
      * @return a float
      */
     self.gain = function(attr) {
-
         return new Promise(function(resolve, reject) {
-            var gain = 0;
-            var count = 0;
-            var maxCount = 0;
-
-            var handleS_v = function(entropySet) {
-                gain -= entropySet.sum / currentTotal * entropySet.entropy;
-                if (count >= maxCount)
-                    resolve(gain);
-                else
-                    count++;
-            }
-
             var currentTotal = 0;
             self.entropy()
                 .then(function(result) {
@@ -91,13 +90,18 @@ var Set = function(options) {
                     return self.split(attr);
                 })
                 .then(function(sets) {
-                    maxCount = sets.length;
+                    var fCalls = [];
                     _.each(sets, function(set) {
-                        set.entropy().then(function(result) {
-                            handleS_v(result);
-                        })
+                        fCalls.push(set.entropy);
                     })
-                }, reject)
+                    return Promise.all(fCalls);
+                }).then(function(results) {
+                    var gain = 0;
+                    _.each(results, function(entropySet) {
+                        gain -= entropySet.sum / currentTotal * entropySet.entropy;
+                    })
+                    resolve(gain);
+                }, reject);
         })
     }
 
@@ -153,11 +157,13 @@ var Set = function(options) {
                     var partRange = (options.numberSplits <= 0) ? 0 : range / (options.numberSplits + 1);
                     var parts = [];
 
+                    //calculate the all the ranges
                     parts.push(min);
                     for (var i = 0; i < options.numberSplits; i++)
                         parts.push(parts[parts.length - 1] + partRange);
                     parts.push(max);
 
+                    //create the new sets
                     var sets = [];
                     for (var i = 0; i <= options.numberSplits; i++) {
                         var newSet = self.Clone();

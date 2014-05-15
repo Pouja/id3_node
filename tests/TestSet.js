@@ -1,5 +1,5 @@
 var Set = require("../src/set.js");
-var Promise = require("promise");
+var Promise = require("bluebird");
 var should = require("should");
 var assert = require("assert");
 describe("Set", function() {

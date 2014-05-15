@@ -1,4 +1,4 @@
-var Promise = require("promise");
+var Promise = require("bluebird");
 var _ = require("underscore");
 var odbc = require("odbc");
 var debug = require("debug")("monetdb");
