@@ -11,7 +11,7 @@ var debug = require("debug")("dt");
 var DecisionTree = function(options) {
     options = options || {};
     var self = {};
-    self.attr = [];
+    var attrs = [];
     var tree = new TreeModel();
     var root;
 
@@ -22,11 +22,8 @@ var DecisionTree = function(options) {
      * @method Setup
      */
     self.Setup = function() {
-        return new Promise(function(resolve, reject) {
-            for (var i = 0; i < options.nAttrs; i++)
-                self.attr.push(options.attrName + i);
-            resolve();
-        })
+        for (var i = 1; i <= options.nAttrs; i++)
+            attrs.push(options.attrName + i);
     }
 
     /**
@@ -36,15 +33,13 @@ var DecisionTree = function(options) {
      * @async
      */
     self.Run = function() {
-        return new Promise(function(resolve, reject) {
-            var set = new Set({
-                attrs: self.attrs,
-                filters: [],
-                db: options.db
-            });
-            root = tree.parse(set);
-            return Run(root);
-        }).then(resolve, reject);
+        var set = new Set({
+            attrs: attrs,
+            filters: [],
+            db: options.db
+        });
+        root = tree.parse(set);
+        return Run(root);
     }
 
     /**
@@ -55,54 +50,43 @@ var DecisionTree = function(options) {
      * @method Run
      */
     var Run = function(node) {
-        return new Promise(function(resolve, reject) {
-            //calc the entropy
-            node.model.entropy()
-                .then(function(e) {
-                    if (e.entropy === 0)
-                        resolve(node)
-                    else {
-                        var fCalls = [];
-                        _.each(node.model.getAttrs(), function(attr) {
-                            fCalls.push(node.model.gain);
-                        })
+        //calc the entropy
+        var e = node.model.entropy()
+        debug("got entropy")
 
-                        //calc all the gains
-                        return Promise.all(fCalls);
-                    }
-                }).then(function(results) {
-                    var gains = [];
-                    _.each(results, function(g) {
-                        gains.push({
-                            gain: g,
-                            attr: attr
-                        });
-                    })
-                    var sortedGains = _.sortBy(gains, function(g) {
-                        return g.gain;
-                    });
-                    sortedGains.reverse();
-                    //split by the attribute with the highest gain
-                    return node.model.split(sortedGains[0].attr)
-                }).then(function(sets) {
-                    var fCalls = [];
-                    _.each(sets, function(set) {
-                        var childNode = tree.parse(set);
-                        fCalls.push(function() {
-                            self.Run(childNode)
-                        })
-                    })
-                    //recursively call Run on each child node
-                    return Promise.all(fCalls);
-                }).then(function(childNodes) {
-                    //add each child node to this node
-                    _.each(childNodes, function(childNode) {
-                        node.addChild(childNode)
-                    })
-                    //resolve the node
-                    resolve(node);
-                }, reject)
+        if (e.entropy === 0)
+            return node
+        else {
+            var results = [];
+            _.each(node.model.getAttrs(), function(attr) {
+                results.push(node.model.gain(attr));
+                debug("got gain for: " + attr)
+            })
+        }
+        debug("got gains")
+        var gains = [];
+        _.each(results, function(g) {
+            gains.push({
+                gain: g,
+                attr: attr
+            });
         })
+        var sortedGains = _.sortBy(gains, function(g) {
+            return g.gain;
+        });
+        sortedGains.reverse();
+        //split by the attribute with the highest gain
+        var sets = node.model.split(sortedGains[0].attr)
+
+        debug("splitted the set")
+        var childNodes = [];
+        _.each(sets, function(set) {
+            var childNode = tree.parse(set);
+            node.addChild(self.Run(childNode))
+        })
+
+        //resolve the node
+        return node
     }
     return self;
 }

@@ -5,11 +5,11 @@ var jf = require("jsonfile");
 var debug = require("debug")("app");
 
 var dt = new DecisionTree({
-    attrN: 28,
+    nAttrs: 28,
     attrName: "attr",
     db: monetdb
 })
-
+dt.Setup();
 monetdb.connectDB()
     .then(function() {
         return dt.Run();

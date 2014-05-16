@@ -45,7 +45,7 @@ var Set = function(options) {
     /**
      * Builds the query
      */
-    var BuildQuery = function() {
+    self.BuildQuery = function() {
         queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
         queryString = queryString.replace("<table>", options.table);
         queryString = (filters.length === 0) ? queryString.replace("<filter>", "1=1") : queryString.replace("<attributes>", _.reduceRight(filters, function(a, b) {
@@ -62,7 +62,7 @@ var Set = function(options) {
             return attr != filter.attr;
         })
         filters.push(filter);
-        BuildQuery();
+        self.BuildQuery();
     }
 
     self.Clone = function() {
@@ -81,27 +81,19 @@ var Set = function(options) {
      * @return a float
      */
     self.gain = function(attr) {
-        return new Promise(function(resolve, reject) {
-            var currentTotal = 0;
-            self.entropy()
-                .then(function(result) {
-                    currentTotal = result.sum;
-                    gain = result.entropy;
-                    return self.split(attr);
-                })
-                .then(function(sets) {
-                    var fCalls = [];
-                    _.each(sets, function(set) {
-                        fCalls.push(set.entropy);
-                    })
-                    return Promise.all(fCalls);
-                }).then(function(results) {
-                    var gain = 0;
-                    _.each(results, function(entropySet) {
-                        gain -= entropySet.sum / currentTotal * entropySet.entropy;
-                    })
-                    resolve(gain);
-                }, reject);
+        var result = self.entropy()
+        var currentTotal = result.sum;
+        var gain = result.entropy;
+
+        var sets = self.split(attr);
+        var entropies = [];
+
+        _.each(sets, function(set) {
+            entropies.push(set.entropy());
+        })
+
+        _.each(entropies, function(entropySet) {
+            gain -= entropySet.sum / currentTotal * entropySet.entropy;
         })
     }
 
@@ -114,25 +106,24 @@ var Set = function(options) {
             return Math.log(n) / Math.log(2);
         }
 
-        return new Promise(function(resolve, reject) {
-            var query = self.BuildSelectQuery("COUNT(class) as count_class");
-            query += " GROUP BY class;"
-            database.execQuery({
-                stmt: query
-            })
-                .then(function(result) {
-                    var sum = _.reduce(result, function(subsum, entry) {
-                        return subsum + entry.count_class;
-                    }, 0);
-                    var E = _.reduce(result, function(subsum, entry) {
-                        return subsum - ((entry.count_class / sum) * log2(entry.count_class / sum));
-                    }, 0)
-                    resolve({
-                        entropy: E,
-                        sum: sum
-                    });
-                }).then(function() {}, reject)
+        var query = self.BuildSelectQuery("COUNT(class) as count_class");
+        query += " GROUP BY class;"
+
+        var result = database.execQuerySync({
+            stmt: query
         })
+
+        var sum = _.reduce(result, function(subsum, entry) {
+            return subsum + entry.count_class;
+        }, 0);
+
+        var E = _.reduce(result, function(subsum, entry) {
+            return subsum - ((entry.count_class / sum) * log2(entry.count_class / sum));
+        }, 0)
+        return {
+            entropy: E,
+            sum: sum
+        };
     }
 
     /**
@@ -141,48 +132,44 @@ var Set = function(options) {
      */
     self.split = function(attr) {
         //get max min of attr
-        var getMax = self.BuildSelectQuery("MIN(?) as min, MAX(?) as max");
+        var getMax = self.BuildSelectQuery("MIN(" + attr + ") as min, MAX(" + attr + ") as max") + ";";
         var max = 1;
         var min = 0;
-        return new Promise(function(resolve, reject) {
-            database.execQuery({
-                stmt: getMax,
-                params: [attr, attr]
-            })
-                .then(function(result) {
-                    debug("retrieved maximum and minimum");
-                    max = result[0].max;
-                    min = result[0].min;
-                    var range = Math.abs(min) + Math.abs(max);
-                    var partRange = (options.numberSplits <= 0) ? 0 : range / (options.numberSplits + 1);
-                    var parts = [];
 
-                    //calculate the all the ranges
-                    parts.push(min);
-                    for (var i = 0; i < options.numberSplits; i++)
-                        parts.push(parts[parts.length - 1] + partRange);
-                    parts.push(max);
-
-                    //create the new sets
-                    var sets = [];
-                    for (var i = 0; i <= options.numberSplits; i++) {
-                        var newSet = self.Clone();
-                        newSet.AddFilter({
-                            attr: attr,
-                            min: parts[i],
-                            max: parts[i + 1]
-                        });
-
-                        sets.push(newSet);
-                    }
-
-                    resolve(sets);
-                }).then(function() {}, reject)
+        var result = database.execQuerySync({
+            stmt: getMax,
         })
 
+        debug("retrieved maximum and minimum");
+        max = result[0].max;
+        min = result[0].min;
+        var range = Math.abs(min) + Math.abs(max);
+        var partRange = (options.numberSplits <= 0) ? 0 : range / (options.numberSplits + 1);
+        var parts = [];
+
+        //calculate the all the ranges
+        parts.push(min);
+        for (var i = 0; i < options.numberSplits; i++)
+            parts.push(parts[parts.length - 1] + partRange);
+        parts.push(max);
+
+        //create the new sets
+        var sets = [];
+        for (var i = 0; i <= options.numberSplits; i++) {
+            var newSet = self.Clone();
+            newSet.AddFilter({
+                attr: attr,
+                min: parts[i],
+                max: parts[i + 1]
+            });
+            sets.BuildQuery();
+            sets.push(newSet);
+        }
+
+        return sets;
     }
 
-    BuildQuery();
+    self.BuildQuery();
     return self;
 }
 module.exports = Set;

@@ -51,7 +51,6 @@ var monetdb = function(options) {
         })
         debug("Executing query: " + query.stmt);
         return new Promise(function(resolve, reject) {
-
             db.query(query.stmt, query.params, function(err, result) {
                 if (err) {
                     debugErr(err);
@@ -62,6 +61,23 @@ var monetdb = function(options) {
                 }
             })
         })
+    }
+
+    /**
+     * Executing a query sync
+     * @param {String} query.stmt (Optional) The query string.
+     * @param {Array} query.params (Optional) The parameters for the query string.
+     * @return {Array} results
+     * @method execQuerySync
+     */
+    self.execQuerySync = function(query) {
+        query = query || {};
+        _.defaults(query, {
+            stmt: "SELECT 1;",
+            params: []
+        })
+        debug("Executing query (sync): " + query.stmt + " with parameters: " + query.params);
+        return db.querySync(query.stmt, query.params);
     }
 
     /**
