@@ -21,17 +21,17 @@ var Set = function(options) {
     var self = {};
 
     //create private variables to prevent conflicts
-    var queryString = "SELECT 1;"
-    var filters = options.filters.slice(0);
-    var attrs = options.attrs.slice(0);
-    var database = options.db;
+    self.queryString = "SELECT 1;"
+    self.filters = options.filters.slice(0);
+    self.attrs = options.attrs.slice(0);
+    self.database = options.db;
 
     /**
      * @return Array The attributes
      * @method getAttrs
      */
     self.getAttrs = function() {
-        return attrs.slice(0);
+        return self.attrs.slice(0);
     }
 
     /**
@@ -39,39 +39,34 @@ var Set = function(options) {
      * @method getFilters
      */
     self.getFilters = function() {
-        return filters.slice(0);
+        return self.filters.slice(0);
     }
 
     /**
      * Builds the query
      */
     self.BuildQuery = function() {
-        queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
-        queryString = queryString.replace("<table>", options.table);
-        queryString = (filters.length === 0) ? queryString.replace("<filter>", "1=1") : queryString.replace("<attributes>", _.reduceRight(filters, function(a, b) {
-            return a += "AND" + b.attr + " >= " + b.min + " AND " + b.attr + " <= " + b.max;
-        }));
+        self.queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
+        self.queryString = self.queryString.replace("<table>", options.table);
+
+        _.each(self.filters, function(filter) {
+            self.queryString = self.queryString.replace("<filter>", filter.attr + " >= " + filter.min + " AND " + filter.attr + " <= " + filter.max + " AND <filter>");
+        });
+
+        self.queryString = self.queryString.replace("<filter>", "1=1");
     }
 
     self.BuildSelectQuery = function(selector) {
-        return queryString.replace("<attributes>", selector);
-    }
-
-    self.AddFilter = function(filter) {
-        attrs = _.filter(attrs, function(attr) {
-            return attr != filter.attr;
-        })
-        filters.push(filter);
-        self.BuildQuery();
+        return self.queryString.replace("<attributes>", selector);
     }
 
     self.Clone = function() {
         var newSettings = _.extend({}, {
-            filters: filters,
+            filters: self.filters,
             numberSplits: options.numberSplits,
             table: options.table,
-            attrs: options.attr,
-            db: database
+            attrs: self.attrs,
+            db: self.database
         });
         return new Set(newSettings);
     }
@@ -81,6 +76,7 @@ var Set = function(options) {
      * @return a float
      */
     self.gain = function(attr) {
+        debug("calculateing gain for: " + attr);
         var result = self.entropy()
         var currentTotal = result.sum;
         var gain = result.entropy;
@@ -102,6 +98,8 @@ var Set = function(options) {
      * @return a float
      */
     self.entropy = function() {
+        debug("Calculating entropy for " + self.filters)
+        ''
         var log2 = function(n) {
             return Math.log(n) / Math.log(2);
         }
@@ -109,7 +107,7 @@ var Set = function(options) {
         var query = self.BuildSelectQuery("COUNT(class) as count_class");
         query += " GROUP BY class;"
 
-        var result = database.execQuerySync({
+        var result = self.database.execQuerySync({
             stmt: query
         })
 
@@ -131,12 +129,13 @@ var Set = function(options) {
      * @return an array of sets
      */
     self.split = function(attr) {
+        debug("making split for " + attr);
         //get max min of attr
         var getMax = self.BuildSelectQuery("MIN(" + attr + ") as min, MAX(" + attr + ") as max") + ";";
         var max = 1;
         var min = 0;
 
-        var result = database.execQuerySync({
+        var result = self.database.execQuerySync({
             stmt: getMax,
         })
 
@@ -157,12 +156,15 @@ var Set = function(options) {
         var sets = [];
         for (var i = 0; i <= options.numberSplits; i++) {
             var newSet = self.Clone();
-            newSet.AddFilter({
+            newSet.filters.push({
                 attr: attr,
                 min: parts[i],
                 max: parts[i + 1]
             });
-            sets.BuildQuery();
+            newSet.attrs = _.filter(newSet.getAttrs(), function(attribute) {
+                return attribute != attr
+            });
+            newSet.BuildQuery();
             sets.push(newSet);
         }
 

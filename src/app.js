@@ -12,10 +12,8 @@ var dt = new DecisionTree({
 dt.Setup();
 monetdb.connectDB()
     .then(function() {
-        return dt.Run();
-    })
-    .then(function(result) {
-        jf.writeFileSync("file.json", result);
+        var root = dt.Run();
+        jf.writeFileSync("file2.json", root.json);
         return monetdb.closeDB();
     })
     .then(function() {}, function(err) {
