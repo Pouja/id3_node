@@ -1,6 +1,7 @@
 var _ = require("underscore");
 var Promise = require("bluebird");
 var debug = require("debug")("set");
+var configDB = require("config").DATABASE;
 
 /**
  * Represents a (sub)set of the data.
@@ -14,8 +15,6 @@ var Set = function(options) {
     _.defaults(options, {
         attrs: [],
         filters: [],
-        numberSplits: 5,
-        table: "data"
     })
 
     var self = {};
@@ -47,7 +46,7 @@ var Set = function(options) {
      */
     self.BuildQuery = function() {
         self.queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
-        self.queryString = self.queryString.replace("<table>", options.table);
+        self.queryString = self.queryString.replace("<table>", configDB.table);
 
         _.each(self.filters, function(filter) {
             self.queryString = self.queryString.replace("<filter>", filter.attr + " >= " + filter.min + " AND " + filter.attr + " <= " + filter.max + " AND <filter>");
@@ -63,8 +62,6 @@ var Set = function(options) {
     self.Clone = function() {
         var newSettings = _.extend({}, {
             filters: self.filters,
-            numberSplits: options.numberSplits,
-            table: options.table,
             attrs: self.attrs,
             db: self.database
         });
@@ -130,43 +127,6 @@ var Set = function(options) {
      */
     self.split = function(attr) {
         debug("making split for " + attr);
-        //get max min of attr
-        var getMax = self.BuildSelectQuery("MIN(" + attr + ") as min, MAX(" + attr + ") as max") + ";";
-        var max = 1;
-        var min = 0;
-
-        var result = self.database.execQuerySync({
-            stmt: getMax,
-        })
-
-        debug("retrieved maximum and minimum");
-        max = result[0].max;
-        min = result[0].min;
-        var range = Math.abs(min) + Math.abs(max);
-        var partRange = (options.numberSplits <= 0) ? 0 : range / (options.numberSplits + 1);
-        var parts = [];
-
-        //calculate the all the ranges
-        parts.push(min);
-        for (var i = 0; i < options.numberSplits; i++)
-            parts.push(parts[parts.length - 1] + partRange);
-        parts.push(max);
-
-        //create the new sets
-        var sets = [];
-        for (var i = 0; i <= options.numberSplits; i++) {
-            var newSet = self.Clone();
-            newSet.filters.push({
-                attr: attr,
-                min: parts[i],
-                max: parts[i + 1]
-            });
-            newSet.attrs = _.filter(newSet.getAttrs(), function(attribute) {
-                return attribute != attr
-            });
-            newSet.BuildQuery();
-            sets.push(newSet);
-        }
 
         return sets;
     }

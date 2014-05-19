@@ -3,6 +3,8 @@ var TreeNode = require("tree-node");
 var Set = require("./set.js");
 var _ = require("underscore");
 var debug = require("debug")("dt");
+var configDB = require("config").DATABASE;
+
 /**
  * The decision tree class.
  * @param {Object} options The options
@@ -20,9 +22,42 @@ var DecisionTree = function(options) {
      * @async
      * @method Setup
      */
-    self.Setup = function() {
-        for (var i = 1; i <= options.nAttrs; i++)
-            attrs.push(options.attrName + i);
+    self.Setup = function(attributes) {
+        _.each(attributes, function(attr) {
+            if (attr.type !== "disc" || attr.type !== "cont")
+                throw new Error("Unknown type specified for: " + attr.name);
+
+            if (attr.type === "disc") {
+                var names = options.db.execQuerySync({
+                    stmt: "SELECT DISCTINT(" + attr.name + ") FROM " + configDB.table
+                });
+                attr.split = names;
+                attrs.push(attr);
+            }
+
+            if (attr.type === "cont") {
+                if (!attr.numberSplits)
+                    throw new Error("Specify number of splits for attribute: " + attr.name);
+
+                var result = options.db.execQuerySync({
+                    stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table
+                });
+                max = result[0].max;
+                min = result[0].min;
+                var range = Math.abs(min) + Math.abs(max);
+                var partRange = (attr.numberSplits <= 0) ? 0 : range / (attr.numberSplits + 1);
+                var parts = [];
+
+                //calculate the all the ranges
+                parts.push(min);
+                for (var i = 0; i < attr.numberSplits; i++)
+                    parts.push(parts[parts.length - 1] + partRange);
+                parts.push(max);
+
+                attr.split = parts;
+                attrs.push(attr);
+            }
+        });
     }
 
     /**
@@ -51,6 +86,7 @@ var DecisionTree = function(options) {
      * @method Run
      */
     var _Run = function(node) {
+        debug("next node");
         if (node.data("model").getAttrs().length === 0)
             return node;
 
@@ -63,7 +99,7 @@ var DecisionTree = function(options) {
         var gains = [];
         _.each(node.data("model").getAttrs(), function(attr) {
             var gain = node.data("model").gain(attr);
-            debug("got gain for: " + attr)
+            debug("got gain for: " + attr.name)
             gains.push({
                 gain: gain,
                 attr: attr
