@@ -36,8 +36,8 @@ var DecisionTree = function(options) {
             }
 
             if (attr.type === "cont") {
-                if (!attr.numberSplits)
-                    throw new Error("Specify number of splits for attribute: " + attr.name);
+                if (!attr.numberSplits && attr.numberSplits > 0)
+                    throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
 
                 var result = options.db.execQuerySync({
                     stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table
