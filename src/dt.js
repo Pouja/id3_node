@@ -13,7 +13,7 @@ var configDB = require("config").DATABASE;
 var DecisionTree = function(options) {
     options = options || {};
     var self = {};
-    var attrs = [];
+    self.attrs = [];
     var root = new TreeNode();
 
     /** 
@@ -23,39 +23,48 @@ var DecisionTree = function(options) {
      * @method Setup
      */
     self.Setup = function(attributes) {
-        _.each(attributes, function(attr) {
-            if (attr.type !== "disc" || attr.type !== "cont")
-                throw new Error("Unknown type specified for: " + attr.name);
+        if (!attributes || attributes.length === 0)
+            throw new Error("Number of attributes should be larger than 0.");
 
-            if (attr.type === "disc") {
-                var names = options.db.execQuerySync({
-                    stmt: "SELECT DISCTINT(" + attr.name + ") FROM " + configDB.table
-                });
-                attr.split = names;
-                attrs.push(attr);
+        _.each(attributes, function(attr, index) {
+            if ((attr.type !== "disc" && attr.type !== "cont") || !attr.name) {
+                throw new Error("Missing or invalid type and or name at index: " + index + ".");
             }
 
-            if (attr.type === "cont") {
-                if (!attr.numberSplits && attr.numberSplits > 0)
-                    throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
+            if ( !! attr.split)
+                self.attrs.push(attr);
+            else {
+                if (attr.type === "disc") {
 
-                var result = options.db.execQuerySync({
-                    stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table
-                });
-                max = result[0].max;
-                min = result[0].min;
-                var range = Math.abs(min) + Math.abs(max);
-                var partRange = (attr.numberSplits <= 0) ? 0 : range / (attr.numberSplits + 1);
-                var parts = [];
+                    var names = options.db.execQuerySync({
+                        stmt: "SELECT DISCTINT(" + attr.name + ") FROM " + configDB.table
+                    });
+                    attr.split = names[0];
+                    self.attrs.push(attr);
+                }
 
-                //calculate the all the ranges
-                parts.push(min);
-                for (var i = 0; i < attr.numberSplits; i++)
-                    parts.push(parts[parts.length - 1] + partRange);
-                parts.push(max);
+                if (attr.type === "cont") {
+                    if (!attr.numberSplits || attr.numberSplits <= 0)
+                        throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
 
-                attr.split = parts;
-                attrs.push(attr);
+                    var result = options.db.execQuerySync({
+                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table
+                    });
+                    max = result[0].max;
+                    min = result[0].min;
+                    var range = Math.abs(min) + Math.abs(max);
+                    var partRange = (attr.numberSplits <= 0) ? 0 : range / (attr.numberSplits + 1);
+                    var parts = [];
+
+                    //calculate the all the ranges
+                    parts.push(min);
+                    for (var i = 0; i < attr.numberSplits; i++)
+                        parts.push(parts[parts.length - 1] + partRange);
+                    parts.push(max);
+
+                    attr.split = parts;
+                    self.attrs.push(attr);
+                }
             }
         });
     }
