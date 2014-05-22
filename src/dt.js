@@ -62,7 +62,20 @@ var DecisionTree = function(options) {
                         parts.push(parts[parts.length - 1] + partRange);
                     parts.push(max);
 
-                    attr.split = parts;
+                    var splits = [];
+                    var pair = {
+                        min: parts[0]
+                    };
+
+                    _.each(_.rest(parts), function(part) {
+                        pair.max = part;
+                        splits.push(pair);
+                        pair = {
+                            min: part
+                        }
+                    })
+
+                    attr.split = splits;
                     self.attrs.push(attr);
                 }
             }
@@ -77,14 +90,14 @@ var DecisionTree = function(options) {
      */
     self.Run = function() {
         var set = new Set({
-            attrs: attrs,
+            attrs: self.attrs,
             filters: [],
             db: options.db
         });
         root.data({
             model: set
         })
-        return _Run(root);
+        return self._Run(root);
     }
 
     /**
@@ -94,7 +107,7 @@ var DecisionTree = function(options) {
      * @private
      * @method Run
      */
-    var _Run = function(node) {
+    self._Run = function(node) {
         debug("next node");
         if (node.data("model").getAttrs().length === 0)
             return node;
@@ -116,12 +129,11 @@ var DecisionTree = function(options) {
         });
         debug("got gains")
 
-        var sortedGains = _.sortBy(gains, function(g) {
+        var highestGains = _.max(gains, function(g) {
             return g.gain;
         });
-        sortedGains.reverse();
         //split by the attribute with the highest gain
-        var sets = node.data("model").split(sortedGains[0].attr)
+        var sets = node.data("model").split(highestGains.attr)
 
         debug("splitted the set")
         var childNodes = [];
@@ -130,10 +142,10 @@ var DecisionTree = function(options) {
             childNode.data({
                 model: set
             });
-            childNode = _Run(childNode);
             node.appendChild(childNode);
-        })
+            childNode = self._Run(childNode);
 
+        })
         //resolve the node
         return node
     }

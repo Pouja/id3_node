@@ -50,4 +50,59 @@ describe("Set", function() {
             e.entropy.should.be.a.Number.and.approximately(0.94, 0.001);
         });
     });
+    describe("#gain", function() {
+        it("should correctly calculate the gain", function() {
+            var sets = [{
+                entropy: function() {
+                    return {
+                        sum: 8,
+                        entropy: 0.811
+                    }
+                }
+            }, {
+                entropy: function() {
+                    return {
+                        sum: 6,
+                        entropy: 1
+                    }
+                }
+            }]
+            var set = new Set({
+                db: {}
+            });
+            set.entropy = function() {
+                return {
+                    sum: 14,
+                    entropy: 0.940
+                }
+            };
+            set.split = function() {
+                return sets;
+            }
+            var result = set.gain({});
+            result.should.approximately(0.048, 0.0001);
+        })
+    })
+    describe("#split", function() {
+        it("should create a new set with one attribute less and one filter more", function() {
+            var attr = {
+                name: "weather",
+                split: ["hot", "cold"],
+                type: "disc"
+            }
+            var set = new Set({
+                db: {},
+                attrs: [attr]
+            });
+            var sets = set.split(attr);
+            sets.should.be.a.Array.with.lengthOf(2);
+            sets[0].attrs.should.be.a.Array.with.lengthOf(0);
+            sets[0].filters.should.be.a.Array.with.lengthOf(1);
+            sets[1].filters[0].should.eql({
+                name: "weather",
+                type: "disc",
+                value: "cold"
+            })
+        })
+    })
 })

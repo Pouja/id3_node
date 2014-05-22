@@ -24,6 +24,7 @@ var Set = function(options) {
     self.filters = options.filters.slice(0);
     self.attrs = options.attrs.slice(0);
     self.database = options.db;
+    self._entropy = undefined;
 
     /**
      * @return Array The attributes
@@ -47,9 +48,11 @@ var Set = function(options) {
     self.BuildQuery = function() {
         self.queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
         self.queryString = self.queryString.replace("<table>", configDB.table);
-
         _.each(self.filters, function(filter) {
-            self.queryString = self.queryString.replace("<filter>", filter.attr + " >= " + filter.min + " AND " + filter.attr + " <= " + filter.max + " AND <filter>");
+            if (filter.type === "cont")
+                self.queryString = self.queryString.replace("<filter>", filter.name + " >= " + filter.value.min + " AND " + filter.name + " <= " + filter.value.max + " AND <filter>");
+            else if (filter.type === "disc")
+                self.queryString = self.queryString.replace("<filter>", filter.name + " = " + filter.value + "AND <filter>");
         });
 
         self.queryString = self.queryString.replace("<filter>", "1=1");
@@ -73,7 +76,7 @@ var Set = function(options) {
      * @return a float
      */
     self.gain = function(attr) {
-        debug("calculateing gain for: " + attr);
+        debug("calculating gain for: " + attr.name);
         var result = self.entropy()
         var currentTotal = result.sum;
         var gain = result.entropy;
@@ -88,6 +91,7 @@ var Set = function(options) {
         _.each(entropies, function(entropySet) {
             gain -= entropySet.sum / currentTotal * entropySet.entropy;
         })
+        return gain;
     }
 
     /**
@@ -95,8 +99,10 @@ var Set = function(options) {
      * @return a float
      */
     self.entropy = function() {
-        debug("Calculating entropy for " + self.filters)
-        ''
+        if (self._entropy !== undefined)
+            return self._entropy;
+        debug("Calculating entropy for " + _.pluck(self.filters, 'name'));
+
         var log2 = function(n) {
             return Math.log(n) / Math.log(2);
         }
@@ -115,10 +121,12 @@ var Set = function(options) {
         var E = _.reduce(result, function(subsum, entry) {
             return subsum - ((entry.count_class / sum) * log2(entry.count_class / sum));
         }, 0)
-        return {
+
+        self._entropy = {
             entropy: E,
             sum: sum
-        };
+        }
+        return self._entropy;
     }
 
     /**
@@ -126,9 +134,30 @@ var Set = function(options) {
      * @return an array of sets
      */
     self.split = function(attr) {
-        debug("making split for " + attr);
-
+        debug("making split for " + attr.name);
+        var sets = []
+        _.each(attr.split, function(s) {
+            var newSet = self.Clone();
+            newSet.attrs = _.filter(newSet.attrs, function(a) {
+                return a.name != attr.name;
+            })
+            newSet.filters.push({
+                type: attr.type,
+                name: attr.name,
+                value: s
+            });
+            newSet.BuildQuery();
+            sets.push(newSet);
+        })
         return sets;
+    }
+
+    self.toJSON = function() {
+        var entropy = (self._entropy === undefined) ? self.entropy() : self._entropy;
+        return {
+            entropy: entropy,
+            filters: self.filters
+        }
     }
 
     self.BuildQuery();

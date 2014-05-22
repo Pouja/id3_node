@@ -1,0 +1,6 @@
+{
+    "DATABASE": {
+        "connectionString": "DRIVER={monetdb};SERVER=localhost;UID=monetdb;PWD=monetdb;DATABASE=higgs_db",
+        "table": "data"
+    }
+}
