@@ -34,14 +34,3 @@ db.connectDB()
         return db.closeDB();
     })
     .then(function() {}, debugErr)
-
-var jsonifyNode = function(node) {
-    var data = node.data("model").toJSON();
-
-    data.children = [];
-    _.each(node._childs, function(child) {
-        data.children.push(jsonifyNode(child));
-    })
-
-    return data;
-}
