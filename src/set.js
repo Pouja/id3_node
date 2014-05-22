@@ -152,14 +152,6 @@ var Set = function(options) {
         return sets;
     }
 
-    self.toJSON = function() {
-        var entropy = (self._entropy === undefined) ? self.entropy() : self._entropy;
-        return {
-            entropy: entropy,
-            filters: self.filters
-        }
-    }
-
     self.BuildQuery();
     return self;
 }
