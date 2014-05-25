@@ -37,9 +37,10 @@ var DecisionTree = function(options) {
                 if (attr.type === "disc") {
 
                     var names = options.db.execQuerySync({
-                        stmt: "SELECT DISCTINT(" + attr.name + ") FROM " + configDB.table
+                        stmt: "SELECT DISTINCT(" + attr.name + ") FROM " + configDB.table
                     });
-                    attr.split = names[0];
+
+                    attr.split = _.pluck(names, attr.name);
                     self.attrs.push(attr);
                 }
 
@@ -108,34 +109,37 @@ var DecisionTree = function(options) {
      * @method Run
      */
     self._Run = function(node) {
-        debug("next node");
-        if (node.data("model").getAttrs().length === 0)
+        if (node.data("model").getAttrs().length === 0) {
+            debug("creating end node");
+            node.data("model").setClass();
             return node;
+        }
 
         var e = node.data("model").entropy()
-        debug("got entropy")
 
-        if (e.entropy === 0)
+        if (e.entropy === 0) {
+            debug("creating end node");
+            node.data("model").setClass();
             return node
+        }
 
         var gains = [];
         _.each(node.data("model").getAttrs(), function(attr) {
             var gain = node.data("model").gain(attr);
-            debug("got gain for: " + attr.name)
             gains.push({
                 gain: gain,
                 attr: attr
             });
         });
-        debug("got gains")
 
         var highestGains = _.max(gains, function(g) {
             return g.gain;
         });
+
         //split by the attribute with the highest gain
+        debug("splitting on: " + highestGains.attr.name);
         var sets = node.data("model").split(highestGains.attr)
 
-        debug("splitted the set")
         var childNodes = [];
         _.each(sets, function(set) {
             var childNode = new TreeNode();
@@ -146,7 +150,7 @@ var DecisionTree = function(options) {
             childNode = self._Run(childNode);
 
         })
-        //resolve the node
+
         return node
     }
     return self;

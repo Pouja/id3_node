@@ -18,8 +18,6 @@ var Set = function(options) {
     })
 
     var self = {};
-
-    //create private variables to prevent conflicts
     self.queryString = "SELECT 1;"
     self.filters = options.filters.slice(0);
     self.attrs = options.attrs.slice(0);
@@ -43,7 +41,8 @@ var Set = function(options) {
     }
 
     /**
-     * Builds the query
+     * Sets the table name for the query and the where clauses.
+     * @method BuildQuery
      */
     self.BuildQuery = function() {
         self.queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
@@ -51,17 +50,27 @@ var Set = function(options) {
         _.each(self.filters, function(filter) {
             if (filter.type === "cont")
                 self.queryString = self.queryString.replace("<filter>", filter.name + " >= " + filter.value.min + " AND " + filter.name + " <= " + filter.value.max + " AND <filter>");
-            else if (filter.type === "disc")
-                self.queryString = self.queryString.replace("<filter>", filter.name + " = " + filter.value + "AND <filter>");
+            else if (filter.type === "disc") {
+                self.queryString = self.queryString.replace("<filter>", filter.name + " = '" + filter.value + "' AND <filter>");
+            }
         });
 
         self.queryString = self.queryString.replace("<filter>", "1=1");
     }
 
+    /**
+     * Replaces <attributes> with selector
+     * @method BuildSelectQuery
+     */
     self.BuildSelectQuery = function(selector) {
         return self.queryString.replace("<attributes>", selector);
     }
 
+    /**
+     * Clones himself
+     * @return {Set} a clone of this.
+     * @method Clone
+     */
     self.Clone = function() {
         var newSettings = _.extend({}, {
             filters: self.filters,
@@ -72,7 +81,7 @@ var Set = function(options) {
     }
 
     /**
-     * Calculates the gain of this set for the given attribute
+     * Calculates the gain of this set for the given attribute.
      * @return a float
      */
     self.gain = function(attr) {
@@ -96,7 +105,10 @@ var Set = function(options) {
 
     /**
      * Calculates the entropy of this set.
-     * @return a float
+     * And sets the _entropye.
+     * @return {Object.entropy} the entropy of this set.
+     * @return {Object.sum} The count of how many entries are for the filters.
+     * @method entropy
      */
     self.entropy = function() {
         if (self._entropy !== undefined)
@@ -130,8 +142,9 @@ var Set = function(options) {
     }
 
     /**
-     * Splits the set in the given attr
-     * @return an array of sets
+     * Splits the set in the given attribute.split
+     * @return {Array} An array of sets
+     * @method split
      */
     self.split = function(attr) {
         debug("making split for " + attr.name);
@@ -150,6 +163,17 @@ var Set = function(options) {
             sets.push(newSet);
         })
         return sets;
+    }
+
+    self.setClass = function() {
+        var query = self.BuildSelectQuery("class, COUNT(*)");
+        query += " GROUP BY class ORDER BY COUNT(*) DESC;"
+
+        var result = self.database.execQuerySync({
+            stmt: query
+        });
+        self.class = result[0].class;
+        debug("setting class: " + self.class + " for this node.");
     }
 
     self.BuildQuery();

@@ -33,4 +33,4 @@ db.connectDB()
 
         return db.closeDB();
     })
-    .then(function() {}, debugErr)
+    .then(console.log, debugErr)
