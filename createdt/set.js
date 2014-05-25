@@ -165,6 +165,10 @@ var Set = function(options) {
         return sets;
     }
 
+    /**
+     * Sets the class for this node.
+     * @method setClass
+     */
     self.setClass = function() {
         var query = self.BuildSelectQuery("class, COUNT(*)");
         query += " GROUP BY class ORDER BY COUNT(*) DESC;"
