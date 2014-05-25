@@ -2,7 +2,7 @@ var Promise = require("bluebird");
 var _ = require("underscore");
 var odbc = require("odbc");
 var debug = require("debug")("database");
-var debugErr = require("debug")("database:error");
+var debugErr = console.error;
 var config = require("config").DATABASE;
 /**
  * Handles the connection to odbc

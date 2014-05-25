@@ -2,7 +2,7 @@ var should = require("should");
 var assert = require("assert");
 var _ = require("underscore");
 
-var DecisionTree = require("../src/dt.js");
+var DecisionTree = require("../createdt/dt.js");
 
 describe("dt", function() {
     describe("#setup", function() {
@@ -37,18 +37,22 @@ describe("dt", function() {
                 type: "disc",
                 name: "weather"
             };
-            var names = ["hot", "windy"];
+            var names = [{
+                weather: "hot"
+            }, {
+                weather: "windy"
+            }];
             var dt = new DecisionTree({
                 db: {
                     execQuerySync: function() {
-                        return [names];
+                        return names;
                     }
                 }
             });
 
             dt.Setup([attr])
             dt.attrs.should.be.a.Array.with.lengthOf(1);
-            dt.attrs[0].should.have.property("split").with.eql(names);
+            dt.attrs[0].should.have.property("split").with.eql(["hot", "windy"]);
         });
         it("should give the correct parts of the continues values", function() {
             var attr = {

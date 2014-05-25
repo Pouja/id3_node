@@ -1,4 +1,4 @@
-var Set = require("../src/set.js");
+var Set = require("../createdt/set.js");
 var Promise = require("bluebird");
 var should = require("should");
 var assert = require("assert");

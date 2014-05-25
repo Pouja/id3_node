@@ -1,4 +1,4 @@
-var db = new require("./database.js")();
+var db = new require("../common/database.js")();
 var DecisionTree = new require("./dt.js");
 var jf = require("jsonfile");
 var _ = require("underscore");
@@ -33,4 +33,4 @@ db.connectDB()
 
         return db.closeDB();
     })
-    .then(console.log, debugErr)
+    .then(function() {}, console.error)
