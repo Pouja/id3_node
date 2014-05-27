@@ -15,7 +15,7 @@ var DecisionTree = function(options) {
     var self = {};
     self.attrs = [];
     var trainingSize = 0;
-    var SPLIT_MAX = 0.001;
+    var SPLIT_MAX = 50;
     /** 
      * Initialises the class.
      * @return {Promise}
@@ -113,7 +113,7 @@ var DecisionTree = function(options) {
         if (e.entropy === 0) {
             return true
         }
-        if (e.sum < (trainingSize * SPLIT_MAX)) {
+        if (e.sum < SPLIT_MAX) {
             return true;
         }
 

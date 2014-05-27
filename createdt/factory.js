@@ -20,7 +20,7 @@ var Factory = function(database) {
         var result = database.execQuerySync({
             stmt: "SELECT COUNT(*) as count FROM " + configDB.table
         });
-        self.maxCount = result[0].count * 0.01;
+        self.maxCount = result[0].count * 0.5;
 
         for (var attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
             for (var splitIndex = 0; splitIndex < attributes[attrIndex].split.length; splitIndex++) {
@@ -90,15 +90,14 @@ var Factory = function(database) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        if (self.offset !== 0 && self.limit > self.maxCount)
+        if (self.offset !== 0 && self.offset > self.maxCount)
             return [];
         var queryString = "SELECT * FROM " + configDB.table + " LIMIT " + self.limit + " OFFSET " + self.offset + ";";
 
         var result = database.execQuerySync({
             stmt: queryString
         });
-        self.offset = self.limit;
-        self.limit += configDB.bulk;
+        self.offset += configDB.bulk;
 
         return result;
     }
