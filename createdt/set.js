@@ -141,15 +141,23 @@ var Set = function(options) {
         var result = self.factory.getIds(self.filters);
         if (_.every(result, function(item) {
             return item.ids.length === 0
-        }))
+        })) {
             self.class = "unknown";
-        else {
+        } else {
             var max = _.max(result, function(item) {
                 return item.ids.length;
             })
             self.class = max.class;
         }
         debug("setting class: " + self.class + " for this node.");
+    }
+
+    self.toJSON = function() {
+        return {
+            entropy: self._entropy,
+            filters: self.filters,
+            class: self.class
+        }
     }
 
     return self;

@@ -4,7 +4,7 @@
     "description": "A decision tree algoritme written in node.",
     "main": "src/app.js",
     "scripts": {
-        "test": "NODE_ENV=test mocha -R spec -r should tests --recursive",
+        "test": "NODE_ENV=test mocha -R spec -r should tests --recursive"
     },
     "author": "Pouja Nikray",
     "license": "BSD-2-Clause",
