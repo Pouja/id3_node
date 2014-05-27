@@ -9,8 +9,6 @@ var configDB = require("config").DATABASE;
  * @class Set
  */
 var Set = function(options) {
-    if (options.db === undefined || options.db === null)
-        throw new Error("database should be passed to options.");
 
     _.defaults(options, {
         attrs: [],
@@ -18,10 +16,9 @@ var Set = function(options) {
     })
 
     var self = {};
-    self.queryString = "SELECT 1;"
     self.filters = options.filters.slice(0);
     self.attrs = options.attrs.slice(0);
-    self.database = options.db;
+    self.factory = options.factory;
     self._entropy = undefined;
 
     /**
@@ -41,32 +38,6 @@ var Set = function(options) {
     }
 
     /**
-     * Sets the table name for the query and the where clauses.
-     * @method BuildQuery
-     */
-    self.BuildQuery = function() {
-        self.queryString = "SELECT <attributes> FROM <table> WHERE <filter>";
-        self.queryString = self.queryString.replace("<table>", configDB.table);
-        _.each(self.filters, function(filter) {
-            if (filter.type === "cont")
-                self.queryString = self.queryString.replace("<filter>", filter.name + " >= " + filter.value.min + " AND " + filter.name + " <= " + filter.value.max + " AND <filter>");
-            else if (filter.type === "disc") {
-                self.queryString = self.queryString.replace("<filter>", filter.name + " = '" + filter.value + "' AND <filter>");
-            }
-        });
-
-        self.queryString = self.queryString.replace("<filter>", "1=1");
-    }
-
-    /**
-     * Replaces <attributes> with selector
-     * @method BuildSelectQuery
-     */
-    self.BuildSelectQuery = function(selector) {
-        return self.queryString.replace("<attributes>", selector);
-    }
-
-    /**
      * Clones himself
      * @return {Set} a clone of this.
      * @method Clone
@@ -75,7 +46,7 @@ var Set = function(options) {
         var newSettings = _.extend({}, {
             filters: self.filters,
             attrs: self.attrs,
-            db: self.database
+            factory: self.factory
         });
         return new Set(newSettings);
     }
@@ -113,25 +84,23 @@ var Set = function(options) {
     self.entropy = function() {
         if (self._entropy !== undefined)
             return self._entropy;
+
         debug("Calculating entropy for " + _.pluck(self.filters, 'name'));
 
         var log2 = function(n) {
             return Math.log(n) / Math.log(2);
         }
-
-        var query = self.BuildSelectQuery("COUNT(class) as count_class");
-        query += " GROUP BY class;"
-
-        var result = self.database.execQuerySync({
-            stmt: query
-        })
+        var result = self.factory.getIds(self.filters);
 
         var sum = _.reduce(result, function(subsum, entry) {
-            return subsum + entry.count_class;
+            return subsum + entry.ids.length;
         }, 0);
 
         var E = _.reduce(result, function(subsum, entry) {
-            return subsum - ((entry.count_class / sum) * log2(entry.count_class / sum));
+            if (entry.ids.length === 0)
+                return subsum;
+            else
+                return subsum - ((entry.ids.length / sum) * log2(entry.ids.length / sum));
         }, 0)
 
         self._entropy = {
@@ -159,7 +128,6 @@ var Set = function(options) {
                 name: attr.name,
                 value: s
             });
-            newSet.BuildQuery();
             sets.push(newSet);
         })
         return sets;
@@ -170,17 +138,20 @@ var Set = function(options) {
      * @method setClass
      */
     self.setClass = function() {
-        var query = self.BuildSelectQuery("class, COUNT(*)");
-        query += " GROUP BY class ORDER BY COUNT(*) DESC;"
-
-        var result = self.database.execQuerySync({
-            stmt: query
-        });
-        self.class = result[0].class;
+        var result = self.factory.getIds(self.filters);
+        if (_.every(result, function(item) {
+            return item.ids.length === 0
+        }))
+            self.class = "unknown";
+        else {
+            var max = _.max(result, function(item) {
+                return item.ids.length;
+            })
+            self.class = max.class;
+        }
         debug("setting class: " + self.class + " for this node.");
     }
 
-    self.BuildQuery();
     return self;
 }
 module.exports = Set;

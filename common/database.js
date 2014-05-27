@@ -77,8 +77,11 @@ var database = function(options) {
             params: []
         })
         debug("Executing query (sync): " + query.stmt + ".")
-        debug("With parameters: " + query.params + ".");
-        return db.querySync(query.stmt, query.params);
+        if (query.params.length > 0)
+            debug("With parameters: " + query.params + ".");
+        var result = db.querySync(query.stmt, query.params);
+        debug("Executing query, done.");
+        return result;
     }
 
     /**

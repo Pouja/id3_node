@@ -14,8 +14,8 @@ var DecisionTree = function(options) {
     options = options || {};
     var self = {};
     self.attrs = [];
-    var root = new TreeNode();
-
+    var trainingSize = 0;
+    var SPLIT_MAX = 0.001;
     /** 
      * Initialises the class.
      * @return {Promise}
@@ -93,12 +93,31 @@ var DecisionTree = function(options) {
         var set = new Set({
             attrs: self.attrs,
             filters: [],
-            db: options.db
+            factory: self.factory
         });
+        var root = new TreeNode();
         root.data({
             model: set
         })
+        var e = root.data("model").entropy();
+        trainingSize = e.sum;
         return self._Run(root);
+    }
+
+    self.shouldStop = function(node) {
+        if (node.data("model").getAttrs().length === 0) {
+            return true;
+        }
+
+        var e = node.data("model").entropy()
+        if (e.entropy === 0) {
+            return true
+        }
+        if (e.sum < (trainingSize * SPLIT_MAX)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -109,19 +128,13 @@ var DecisionTree = function(options) {
      * @method Run
      */
     self._Run = function(node) {
-        if (node.data("model").getAttrs().length === 0) {
+        if (self.shouldStop(node)) {
             debug("creating end node");
             node.data("model").setClass();
             return node;
         }
 
         var e = node.data("model").entropy()
-
-        if (e.entropy === 0) {
-            debug("creating end node");
-            node.data("model").setClass();
-            return node
-        }
 
         var gains = [];
         _.each(node.data("model").getAttrs(), function(attr) {
