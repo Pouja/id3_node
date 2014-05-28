@@ -3,7 +3,7 @@ var _ = require("underscore");
 
 var Factory = function(options) {
     var self = {
-        offset: 0,
+        offset: config.testStartId,
         limit: config.bulk
     };
 
@@ -19,10 +19,6 @@ var Factory = function(options) {
         _.each(options.attributes, function(attr) {
             attributes.push(attr.name);
         })
-        var result = database.execQuerySync({
-            stmt: "SELECT COUNT(*) FROM " + config.testTable
-        });
-        self.maxCount = result;
     }
 
     /**
@@ -30,18 +26,15 @@ var Factory = function(options) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        if (self.offset !== 0 && self.limit > self.maxCount)
-            return [];
         var queryString = _.reduce(attributes, function(memo, attr) {
             return memo += " " + attr + ",";
         }, "SELECT");
-        queryString += " class FROM " + config.testTable + " LIMIT " + self.limit + " OFFSET " + self.offset + ";";
+        queryString += " class FROM " + config.table + " WHERE id >= " + config.testStartId + " AND id <= " + config.testEndId + " LIMIT " + self.limit + " OFFSET " + self.offset + ";";
 
         var result = database.execQuerySync({
             stmt: queryString
         });
-        self.offset = self.limit;
-        self.limit += config.bulk;
+        self.offset += config.bulk;
 
         return result;
     }

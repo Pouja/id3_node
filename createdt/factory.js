@@ -1,8 +1,12 @@
-var _ = require("underscore");
 var configDB = require("config").DATABASE;
 var Util = require("../common/util.js");
 var debug = require("debug")("factory");
 
+/**
+ * ATTENTION
+ * This class has some very very ugly code.
+ * This class only uses native code and minimal amount of functions to achieve the highest performance.
+ */
 var Factory = function(database) {
     var self = {
         offset: 0,
@@ -12,11 +16,14 @@ var Factory = function(database) {
 
     var map = [];
     var database = database;
-    var attributesNames = [];
+
+    self.getMap = function() {
+        return map;
+    }
     /**
      * Retrieves all the ids for each possible split
      */
-    self.init = function(attributes) {
+    self.loadMap = function(attributes) {
         for (var attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
             for (var splitIndex = 0; splitIndex < attributes[attrIndex].split.length; splitIndex++) {
                 map.push({
@@ -26,16 +33,23 @@ var Factory = function(database) {
                     data: []
                 });
             }
-            attributesNames.push(attributes[attrIndex].name)
         }
+    }
 
+    self.loadIds = function() {
+        //for every batch
         for (var batch = self.getNextBatch(); batch.length > 0; batch = self.getNextBatch()) {
+            //for every row in batch
             for (var row = batch.pop(); row !== undefined; row = batch.pop()) {
+                //for every filter in map
                 for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
                     var filter = map[mapIndex];
+                    //CONT
                     if (filter.type === "cont") {
-                        if (row[filter.name] >= filter.value.min && filter.value.max <= row[filter.name]) {
+                        //if the filter matches the row
+                        if (row[filter.name] >= filter.value.min && filter.value.max >= row[filter.name]) {
                             var found = false;
+                            //find the class with the ids that match this row
                             for (var j = 0; j < filter.data.length; j++) {
                                 if (filter.data[j].class === row['class']) {
                                     filter.data[j].ids.push(row['id']);
@@ -50,8 +64,9 @@ var Factory = function(database) {
                             }
                         }
                     }
+                    //DISC
                     if (filter.type === "disc") {
-                        if (row[filter.name] == filter.value) {
+                        if (row[filter.name] === filter.value) {
                             var found = false;
                             for (var j = 0; j < filter.data.length; j++) {
                                 if (filter.data[j].class === row['class']) {
@@ -70,7 +85,15 @@ var Factory = function(database) {
                 }
             }
         }
+    }
 
+    self.init = function(attributes) {
+        self.loadMap(attributes);
+        self.loadIds();
+        self.orderMap();
+    }
+
+    self.orderMap = function() {
         for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
             for (var classIndex = 0; classIndex < map[mapIndex].data.length; classIndex++) {
                 map[mapIndex].data[classIndex].ids.sort(function(a, b) {
@@ -78,6 +101,7 @@ var Factory = function(database) {
                 })
             }
         }
+
     }
 
     /**
@@ -85,7 +109,7 @@ var Factory = function(database) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        var queryString = "SELECT * FROM " + configDB.table + " WHERE id < " + configDB.hardLimit + " LIMIT " + self.limit + " OFFSET " + self.offset;
+        var queryString = "SELECT * FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId + " LIMIT " + self.limit + " OFFSET " + self.offset;
 
         var result = database.execQuerySync({
             stmt: queryString
@@ -101,43 +125,53 @@ var Factory = function(database) {
     self.getIds = function(filters) {
         var result = [];
         if (filters.length === 0) {
-            _.each(map, function(f) {
-                _.each(f.data, function(c) {
-                    var r = _.find(result, function(rs) {
-                        return rs.class === c.class;
-                    })
-
-                    if ( !! r) {
-                        r.ids = Util.union(r.ids, c.ids);
-                    } else {
+            for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
+                for (var classIndex = 0; classIndex < map[mapIndex].data.length; classIndex++) {
+                    var found = false;
+                    for (var resultIndex = 0; resultIndex < result.length && !found; resultIndex++) {
+                        if (result[resultIndex].class === map[mapIndex].data[classIndex].class) {
+                            result[resultIndex].ids = Util.union(result[resultIndex].ids, map[mapIndex].data[classIndex].ids);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
                         result.push({
-                            class: c.class,
-                            ids: c.ids
+                            class: map[mapIndex].data[classIndex].class,
+                            ids: map[mapIndex].data[classIndex].ids
                         })
                     }
-                })
-            })
+                }
+            }
         } else {
-            _.each(filters, function(filter) {
-                _.each(map, function(f) {
-                    if (f.name === filter.name && f.value === filter.value) {
-                        _.each(f.data, function(c) {
-                            var r = _.find(result, function(rs) {
-                                return rs.class === c.class;
-                            })
+            for (var filterIndex = 0; filterIndex < filters.length; filterIndex++) {
+                for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
+                    var valid = filters[filterIndex].name === map[mapIndex].name;
 
-                            if ( !! r) {
-                                r.ids = Util.intersection(r.ids, c.ids);
-                            } else {
+                    if (filters[filterIndex].type === "disc") {
+                        valid = valid && filters[filterIndex].value === map[mapIndex].value;
+                    } else {
+                        valid = valid && filters[filterIndex].value.min === map[mapIndex].value.min && filters[filterIndex].value.max === map[mapIndex].value.max;
+                    }
+
+                    if (valid) {
+                        for (var classIndex = 0; classIndex < map[mapIndex].data.length; classIndex++) {
+                            var found = false;
+                            for (var resultIndex = 0; resultIndex < result.length && !found; resultIndex++) {
+                                if (result[resultIndex].class === map[mapIndex].data[classIndex].class) {
+                                    result[resultIndex].ids = Util.intersection(result[resultIndex].ids, map[mapIndex].data[classIndex].ids);
+                                    found = true;
+                                }
+                            }
+                            if (!found) {
                                 result.push({
-                                    class: c.class,
-                                    ids: c.ids
+                                    class: map[mapIndex].data[classIndex].class,
+                                    ids: map[mapIndex].data[classIndex].ids
                                 })
                             }
-                        })
+                        }
                     }
-                })
-            })
+                }
+            }
         }
         return result;
     }

@@ -48,8 +48,9 @@ var DecisionTree = function(options) {
                         throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
 
                     var result = options.db.execQuerySync({
-                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table + " WHERE id < " + configDB.hardLimit
+                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId
                     });
+
                     max = result[0].max;
                     min = result[0].min;
                     var range = Math.abs(min) + Math.abs(max);
