@@ -6,7 +6,8 @@ var debug = require("debug")("factory");
 var Factory = function(database) {
     var self = {
         offset: 0,
-        limit: configDB.bulk
+        limit: configDB.bulk,
+        maxCount: configDB.hardLimit
     };
 
     var map = [];
@@ -16,12 +17,6 @@ var Factory = function(database) {
      * Retrieves all the ids for each possible split
      */
     self.init = function(attributes) {
-
-        var result = database.execQuerySync({
-            stmt: "SELECT COUNT(*) as count FROM " + configDB.table
-        });
-        self.maxCount = result[0].count * 0.01;
-
         for (var attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
             for (var splitIndex = 0; splitIndex < attributes[attrIndex].split.length; splitIndex++) {
                 map.push({
@@ -90,33 +85,14 @@ var Factory = function(database) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        if (self.offset !== 0 && self.limit > self.maxCount)
-            return [];
-        var queryString = "SELECT * FROM " + configDB.table + " LIMIT " + self.limit + " OFFSET " + self.offset + ";";
+        var queryString = "SELECT * FROM " + configDB.table + " WHERE id < " + configDB.hardLimit + " LIMIT " + self.limit + " OFFSET " + self.offset;
 
         var result = database.execQuerySync({
             stmt: queryString
         });
-        self.offset = self.limit;
-        self.limit += configDB.bulk;
+        self.offset += configDB.bulk;
 
         return result;
-    }
-
-    /**
-     * Sets the table name for the query and the where clauses.
-     * @method BuildQuery
-     */
-    self.BuildQuery = function(filter) {
-        var queryString = "SELECT id, class FROM <table> WHERE <filter> ORDER BY id ASC;";
-        queryString = queryString.replace("<table>", configDB.table);
-        if (filter.type === "cont")
-            queryString = queryString.replace("<filter>", filter.name + " >= " + filter.value.min + " AND " + filter.name + " <= " + filter.value.max + " AND <filter>");
-        else if (filter.type === "disc") {
-            queryString = queryString.replace("<filter>", filter.name + " = '" + filter.value + "' AND <filter>");
-        };
-        queryString = queryString.replace("<filter>", "1=1");
-        return queryString;
     }
 
     /**

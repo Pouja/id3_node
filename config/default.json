@@ -3,6 +3,7 @@
         "connectionString": "DRIVER={monetdb};SERVER=localhost;UID=monetdb;PWD=monetdb;DATABASE=higgs_db",
         "table": "data",
         "testTable": "test2",
-        "bulk": 100000
+        "bulk": 100000,
+        "hardLimit": 2500000
     }
 }

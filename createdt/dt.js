@@ -14,8 +14,7 @@ var DecisionTree = function(options) {
     options = options || {};
     var self = {};
     self.attrs = [];
-    var trainingSize = 0;
-    var SPLIT_MAX = 0.001;
+    var SPLIT_MAX = 10;
     /** 
      * Initialises the class.
      * @return {Promise}
@@ -37,7 +36,7 @@ var DecisionTree = function(options) {
                 if (attr.type === "disc") {
 
                     var names = options.db.execQuerySync({
-                        stmt: "SELECT DISTINCT(" + attr.name + ") FROM " + configDB.table
+                        stmt: "SELECT DISTINCT(" + attr.name + ") FROM " + configDB.table + " WHERE id < " + configDB.hardLimit
                     });
 
                     attr.split = _.pluck(names, attr.name);
@@ -49,7 +48,7 @@ var DecisionTree = function(options) {
                         throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
 
                     var result = options.db.execQuerySync({
-                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table
+                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table + " WHERE id < " + configDB.hardLimit
                     });
                     max = result[0].max;
                     min = result[0].min;
@@ -99,8 +98,6 @@ var DecisionTree = function(options) {
         root.data({
             model: set
         })
-        var e = root.data("model").entropy();
-        trainingSize = e.sum;
         return self._Run(root);
     }
 
@@ -113,7 +110,7 @@ var DecisionTree = function(options) {
         if (e.entropy === 0) {
             return true
         }
-        if (e.sum < (trainingSize * SPLIT_MAX)) {
+        if (e.sum < SPLIT_MAX) {
             return true;
         }
 
