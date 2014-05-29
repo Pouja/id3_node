@@ -36,7 +36,7 @@ db.connectDB()
             })
             batch = factory.getNextBatch();
         }
-        console.log("Number of mismatches: " + mismatch);
+        jf.writeFileSync(args[0], "Number of mismatches: " + mismatch);
         return db.closeDB();
     })
     .then(function() {}, debugErr);

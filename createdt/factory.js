@@ -12,9 +12,8 @@ var debug = require("debug")("factory");
  */
 var Factory = function(database) {
     var self = {
-        offset: 0,
+        offset: configDB.createStartId,
         limit: configDB.bulk,
-        maxCount: configDB.hardLimit
     };
 
     var map = [];
@@ -132,7 +131,9 @@ var Factory = function(database) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        var queryString = "SELECT * FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId + " LIMIT " + self.limit + " OFFSET " + self.offset;
+        if (self.offset >= configDB.createEndId)
+            return [];
+        var queryString = "SELECT * FROM " + configDB.table + " LIMIT " + self.limit + " OFFSET " + self.offset;
         var result = database.execQuerySync({
             stmt: queryString
         });

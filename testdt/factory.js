@@ -26,11 +26,9 @@ var Factory = function(options) {
      * @method getNextBatch
      */
     self.getNextBatch = function() {
-        var queryString = _.reduce(attributes, function(memo, attr) {
-            return memo += " " + attr + ",";
-        }, "SELECT");
-        queryString += " class FROM " + config.table + " WHERE id >= " + config.testStartId + " AND id <= " + config.testEndId + " LIMIT " + self.limit + " OFFSET " + self.offset + ";";
-
+        if (self.offset >= config.testEndId)
+            return [];
+        var queryString = "SELECT * FROM " + config.table + " LIMIT " + self.limit + " OFFSET " + self.offset;
         var result = database.execQuerySync({
             stmt: queryString
         });
