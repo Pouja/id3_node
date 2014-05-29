@@ -60,7 +60,8 @@ Example:
 ```
 ## Testing Decision Tree
 Run `DEBUG=* node testdt/app.js outputfilename attributefilename inputfilename`
-The inputfilename should match the outputfilename. The outputfile will contain the number of mismatches.
+
+The inputfilename should match the filename where the decision tree is stored from createdt/app.js. The outputfile will contain the number of mismatches.
 
 license
 -------
