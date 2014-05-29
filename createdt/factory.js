@@ -110,7 +110,6 @@ var Factory = function(database) {
      */
     self.getNextBatch = function() {
         var queryString = "SELECT * FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId + " LIMIT " + self.limit + " OFFSET " + self.offset;
-
         var result = database.execQuerySync({
             stmt: queryString
         });

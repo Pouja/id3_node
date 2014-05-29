@@ -160,7 +160,6 @@ var DecisionTree = function(options) {
             });
             node.appendChild(childNode);
             childNode = self._Run(childNode);
-
         })
 
         return node
