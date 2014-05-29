@@ -6,6 +6,9 @@ var debug = require("debug")("factory");
  * ATTENTION
  * This class has some very very ugly code.
  * This class only uses native code and minimal amount of functions to achieve the highest performance.
+ * This class loads all ids for each split.
+ * @param {Database} database The database object.
+ * @class Factory
  */
 var Factory = function(database) {
     var self = {
@@ -17,11 +20,18 @@ var Factory = function(database) {
     var map = [];
     var database = database;
 
+    /**
+     * @return The map with all the filters and ids.
+     * @method getMap
+     */
     self.getMap = function() {
         return map;
     }
+
     /**
-     * Retrieves all the ids for each possible split
+     * Initializes the map with all possible splits for each attribute.
+     * @param {Array} attributes The attributes.
+     * @method loadMap
      */
     self.loadMap = function(attributes) {
         for (var attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
@@ -36,6 +46,10 @@ var Factory = function(database) {
         }
     }
 
+    /**
+     * For each entry in map, init all the ids that match the split value
+     * @method loadIds
+     */
     self.loadIds = function() {
         //for every batch
         for (var batch = self.getNextBatch(); batch.length > 0; batch = self.getNextBatch()) {
@@ -87,12 +101,21 @@ var Factory = function(database) {
         }
     }
 
+    /**
+     * Initializes the factory.
+     * This should be called before running the algoritme.
+     * @method init
+     */
     self.init = function(attributes) {
         self.loadMap(attributes);
         self.loadIds();
         self.orderMap();
     }
 
+    /**
+     * For each entry in map order the ids ascending.
+     * @method orderMap
+     */
     self.orderMap = function() {
         for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
             for (var classIndex = 0; classIndex < map[mapIndex].data.length; classIndex++) {
@@ -123,8 +146,11 @@ var Factory = function(database) {
      */
     self.getIds = function(filters) {
         var result = [];
+        //if the filter legnth is 0, get all the ids for each possible class
         if (filters.length === 0) {
+            //for each map entry
             for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
+                //for each class
                 for (var classIndex = 0; classIndex < map[mapIndex].data.length; classIndex++) {
                     var found = false;
                     for (var resultIndex = 0; resultIndex < result.length && !found; resultIndex++) {
@@ -142,6 +168,7 @@ var Factory = function(database) {
                 }
             }
         } else {
+            //get the intersection of each entry in map that match the filters
             for (var filterIndex = 0; filterIndex < filters.length; filterIndex++) {
                 for (var mapIndex = 0; mapIndex < map.length; mapIndex++) {
                     var valid = filters[filterIndex].name === map[mapIndex].name;

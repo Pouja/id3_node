@@ -12,13 +12,14 @@ var configDB = require("config").DATABASE;
  */
 var DecisionTree = function(options) {
     options = options || {};
-    var self = {};
-    self.attrs = [];
+    var self = {
+        attrs: []
+    };
     var SPLIT_MAX = configDB.stopCriteria;
+
     /** 
-     * Initialises the class.
-     * @return {Promise}
-     * @async
+     * For each attribute get the possible splits and saves them to self.attrs.
+     * @param {Array} attributes The attributes.
      * @method Setup
      */
     self.Setup = function(attributes) {
@@ -30,9 +31,11 @@ var DecisionTree = function(options) {
                 throw new Error("Missing or invalid type and or name at index: " + index + ".");
             }
 
+            //if a split is already given, use that
             if ( !! attr.split)
                 self.attrs.push(attr);
             else {
+                //for discrete values its easy to get all the possible splits
                 if (attr.type === "disc") {
 
                     var names = options.db.execQuerySync({
@@ -42,7 +45,7 @@ var DecisionTree = function(options) {
                     attr.split = _.pluck(names, attr.name);
                     self.attrs.push(attr);
                 }
-
+                //for continious values, get the min and max and calculate each possible split
                 if (attr.type === "cont") {
                     if (!attr.numberSplits || attr.numberSplits <= 0)
                         throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
@@ -85,9 +88,8 @@ var DecisionTree = function(options) {
 
     /**
      * Runs the decision tree algoritme
-     * @return {Promise} The first argument is the root of the builded decision tree.
+     * @return {TreeNode} The root of the builded decision tree.
      * @method Run
-     * @async
      */
     self.Run = function() {
         var set = new Set({
@@ -102,17 +104,19 @@ var DecisionTree = function(options) {
         return self._Run(root);
     }
 
+    /**
+     * Checks if the node should become an end node
+     * @param {TreeNode} node A node.
+     * @return {boolean} True if the attributes is 0 or the entropy is 0 or if the sum is low enough.
+     * @method shouldStop
+     */
     self.shouldStop = function(node) {
         if (node.data("model").getAttrs().length === 0) {
             return true;
         }
 
         var e = node.data("model").entropy()
-        if (e.entropy === 0) {
-            return true
-        }
-        if (e.sum < SPLIT_MAX) {
-            console.log("created a node because sum (" + e.sum + ") is lower than " + SPLIT_MAX);
+        if (e.entropy === 0 || e.sum < SPLIT_MAX) {
             return true;
         }
 
@@ -121,10 +125,9 @@ var DecisionTree = function(options) {
 
     /**
      * Runs the decision tree algoritme on the give node.
-     * @return {Promise} The first argument is a node of the decision tree.
-     * @async
+     * @return {TreeNode} A node of the decision tree.
      * @private
-     * @method Run
+     * @method _Run
      */
     self._Run = function(node) {
         if (self.shouldStop(node)) {

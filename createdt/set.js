@@ -152,6 +152,10 @@ var Set = function(options) {
         debug("setting class: " + self.class + " for this node.");
     }
 
+    /**
+     * @return {JSON} The json representation of this class.
+     * @method toJSON
+     */
     self.toJSON = function() {
         return {
             entropy: self._entropy,
