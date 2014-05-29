@@ -3,9 +3,10 @@
         "connectionString": "DRIVER={monetdb};SERVER=localhost;UID=monetdb;PWD=monetdb;DATABASE=higgs_db",
         "table": "data",
         "bulk": 100000,
-        "createStartId": 1,
-        "createEndId": 2500000,
+        "createStartId": 5000000,
+        "createEndId": 6000000,
         "testStartId": 3000,
-        "testEndId": 10000
+        "testEndId": 10000,
+        "stopCriteria": 100
     }
 }

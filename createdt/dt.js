@@ -14,7 +14,7 @@ var DecisionTree = function(options) {
     options = options || {};
     var self = {};
     self.attrs = [];
-    var SPLIT_MAX = 10;
+    var SPLIT_MAX = configDB.stopCriteria;
     /** 
      * Initialises the class.
      * @return {Promise}
@@ -112,6 +112,7 @@ var DecisionTree = function(options) {
             return true
         }
         if (e.sum < SPLIT_MAX) {
+            console.log("created a node because sum (" + e.sum + ") is lower than " + SPLIT_MAX);
             return true;
         }
 
