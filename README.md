@@ -13,7 +13,7 @@ So for practical use, this solution will run perfectly and well for anything bel
 Otherwise you will have to run this for a long time (5hours +) and you will probably hit the memory limit.
 
 ## Database
-Because the first implementation used a lot of database IO, specifically a lot of aggregation on records, MonetDB has been chosing to run with it. At the second implementation the database IO has been significally reduced.
+Because the first implementation used a lot of database IO, specifically a lot of aggregation on records, MonetDB has been chosing to run with it. At the second implementation the database IO has been significally reduced, but I sticked with MonetDB.
 There is currently no direct implementation of using MonetDB with Node, so ODBC is the connection link between the two.
 Under \common you will find the database class which can easily be replaced with mysql/postgresql solution.
 
@@ -51,7 +51,13 @@ Example:
   {
     "name": "attr2",
     "type": "cont",
-    "numberSplits": 4
+    "split":{
+      "min": 0,
+      "max": 8
+    },{
+      "min": 9,
+      "max": 11
+    }
   },
   {
     "name": "outlook",
