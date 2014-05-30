@@ -64,6 +64,11 @@ Example:
     "type": "disc"
 }]
 ```
+## Future Work
+ * Improve the application by using multiple cores
+ * Create more tests
+ * Change set.js by using prototype instead of closure
+
 ## Testing Decision Tree
 Run `DEBUG=* node testdt/app.js outputfilename attributefilename inputfilename`
 
