@@ -15,6 +15,7 @@ var DecisionTree = function(options) {
     var self = {
         attrs: []
     };
+
     var SPLIT_MAX = configDB.stopCriteria;
 
     /** 
@@ -37,53 +38,73 @@ var DecisionTree = function(options) {
             else {
                 //for discrete values its easy to get all the possible splits
                 if (attr.type === "disc") {
-
-                    var names = options.db.execQuerySync({
-                        stmt: "SELECT DISTINCT(" + attr.name + ") FROM " + configDB.table + " WHERE id < " + configDB.hardLimit
-                    });
-
-                    attr.split = _.pluck(names, attr.name);
-                    self.attrs.push(attr);
+                    self.attrs.push(parseDiscAttr(attr));
                 }
                 //for continious values, get the min and max and calculate each possible split
                 if (attr.type === "cont") {
-                    if (!attr.numberSplits || attr.numberSplits <= 0)
-                        throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
-
-                    var result = options.db.execQuerySync({
-                        stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId
-                    });
-
-                    max = result[0].max;
-                    min = result[0].min;
-                    var range = Math.abs(min) + Math.abs(max);
-                    var partRange = (attr.numberSplits <= 0) ? 0 : range / (attr.numberSplits + 1);
-                    var parts = [];
-
-                    //calculate the all the ranges
-                    parts.push(min);
-                    for (var i = 0; i < attr.numberSplits; i++)
-                        parts.push(parts[parts.length - 1] + partRange);
-                    parts.push(max);
-
-                    var splits = [];
-                    var pair = {
-                        min: parts[0]
-                    };
-
-                    _.each(_.rest(parts), function(part) {
-                        pair.max = part;
-                        splits.push(pair);
-                        pair = {
-                            min: part
-                        }
-                    })
-
-                    attr.split = splits;
-                    self.attrs.push(attr);
+                    self.attrs.push(parseContAttr(attr));
                 }
             }
         });
+    }
+
+    /**
+     * Gets all the distinct row values for the given attribute column name
+     * @param {Object} attr An attribute object.
+     * @return {Object} same object but with splits
+     * @private
+     * @methode parseDiscAttr
+     */
+    var parseDiscAttr = function(attr) {
+        var names = options.db.execQuerySync({
+            stmt: "SELECT DISTINCT(" + attr.name + ") FROM " + configDB.table + " WHERE id < " + configDB.hardLimit
+        });
+
+        attr.split = _.pluck(names, attr.name);
+    }
+
+    /**
+     * Calculates the splits for the given attribute with name and numberSplits
+     * @param {Object} attr An attribute object.
+     * @return {Object} same object but with splits
+     * @private
+     * @methode parseContAttr
+     */
+    var parseContAttr = function(attr) {
+        if (!attr.numberSplits || attr.numberSplits <= 0)
+            throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
+
+        var result = options.db.execQuerySync({
+            stmt: "SELECT MIN(" + attr.name + ") as min, MAX(" + attr.name + ") as max FROM " + configDB.table + " WHERE id >= " + configDB.createStartId + " AND id <= " + configDB.createEndId
+        });
+
+        max = result[0].max;
+        min = result[0].min;
+        var range = Math.abs(min) + Math.abs(max);
+        var partRange = (attr.numberSplits <= 0) ? 0 : range / (attr.numberSplits + 1);
+        var parts = [];
+
+        //calculate the all the ranges
+        parts.push(min);
+        for (var i = 0; i < attr.numberSplits; i++)
+            parts.push(parts[parts.length - 1] + partRange);
+        parts.push(max);
+
+        var splits = [];
+        var pair = {
+            min: parts[0]
+        };
+
+        _.each(_.rest(parts), function(part) {
+            pair.max = part;
+            splits.push(pair);
+            pair = {
+                min: part
+            }
+        })
+
+        attr.split = splits;
+        return attr;
     }
 
     /**
