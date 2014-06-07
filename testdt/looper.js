@@ -4,6 +4,7 @@ var looper = function(node, entry) {
     if (node.data("model").class !== undefined) {
         return match(node, entry) && node.data("model").class === entry.class;
     }
+
     return _.some(node._childs, function(child) {
         if (match(child, entry)) {
             return looper(child, entry)

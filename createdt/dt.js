@@ -42,7 +42,7 @@ var DecisionTree = function(options) {
                 }
                 //for continious values, get the min and max and calculate each possible split
                 if (attr.type === "cont") {
-                    self.attrs.push(parseContAttr(attr));
+                    self.attrs.push(self.parseContAttr(attr));
                 }
             }
         });
@@ -70,7 +70,7 @@ var DecisionTree = function(options) {
      * @private
      * @methode parseContAttr
      */
-    var parseContAttr = function(attr) {
+    self.parseContAttr = function(attr) {
         if (!attr.numberSplits || attr.numberSplits <= 0)
             throw new Error("Specify number of splits for attribute: " + attr.name + " is either invalid or undefined.");
 

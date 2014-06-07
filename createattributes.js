@@ -3,7 +3,7 @@ var _ = require("underscore");
 var base = {
     name: "attr",
     type: "cont",
-    numberSplits: 10
+    numberSplits: 25
 }
 var data = [];
 for (var i = 1; i <= 28; i++) {

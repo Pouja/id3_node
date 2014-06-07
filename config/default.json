@@ -2,11 +2,11 @@
     "DATABASE": {
         "connectionString": "DRIVER={monetdb};SERVER=localhost;UID=monetdb;PWD=monetdb;DATABASE=higgs_db",
         "table": "data",
-        "bulk": 200000,
-        "createStartId": 8400000,
-        "createEndId": 8600000,
-        "testStartId": 8000000,
-        "testEndId": 8050000,
+        "bulk": 10000,
+        "createStartId": 450000,
+        "createEndId": 470000,
+        "testStartId": 110000,
+        "testEndId": 120000,
         "stopCriteria": 50
     }
 }

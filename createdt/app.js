@@ -3,7 +3,7 @@ var DecisionTree = new require("./dt.js");
 var jf = require("jsonfile");
 var _ = require("underscore");
 var Factory = require("./factory.js");
-
+var config = require("config").DATABASE;
 var debug = require("debug")("app");
 var debugErr = require("debug")("app:error");
 
@@ -19,7 +19,14 @@ debug("Writing result tree to: " + args[0]);
 var dt = new DecisionTree({
     db: db
 })
-var factory = new Factory(db);
+
+var factory = new Factory({
+    db: db,
+    startId: config.createStartId,
+    endId: config.createEndId,
+    table: config.table,
+    bulk: config.bulk
+});
 
 db.connectDB()
     .then(function() {
