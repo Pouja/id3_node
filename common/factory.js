@@ -8,13 +8,13 @@ var _ = require("underscore");
  * @param {Number} config.endId The last id that is allowed to be retrieved.
  * @param {Number} config.bulk The number of records that is allowed to be retrieved each time.
  * @param {String} config.table The table name.
+ * @class Factory
  */
 var Factory = function(config) {
+    _.extend(this, config);
     this.database = config.db;
     this.offset = config.startId;
-    this.endId = config.endId;
     this.limit = config.bulk;
-    this.table = config.table;
 }
 
 /**
@@ -31,6 +31,10 @@ Factory.prototype.getNextBatch = function() {
     this.offset += this.limit;
 
     return result;
+}
+
+Factory.prototype.reset = function() {
+    this.offset = this.startId;
 }
 
 module.exports = Factory;

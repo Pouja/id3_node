@@ -11,12 +11,33 @@ var looper = require("./looper.js").looper;
 
 var args = process.argv.slice(2);
 
-if (!args[2])
-    throw new Error("Specify output filename.");
 if (!args[1])
     throw new Error("Specify json file for attributes.");
 if (!args[0])
     throw new Error("Specify json file for decision tree data.");
+
+var mismatch = {
+    tp: 0,
+    fp: 0,
+    fn: 0,
+    tn: 0
+};
+
+var processResult = function(match, actual, predicted) {
+    if (match === true && actual === predicted) {
+        if (actual === 0) {
+            mismatch.tn++;
+        } else {
+            mismatch.tp++;
+        }
+    } else {
+        if (predicted === 1) {
+            mismatch.fp++;
+        } else {
+            mismatch.fn++;
+        }
+    }
+}
 
 db.connectDB()
     .then(function() {
@@ -32,14 +53,13 @@ db.connectDB()
         root.reborn(jf.readFileSync(args[0]));
 
         var batch = factory.getNextBatch();
-        var mismatch = 0;
         while (batch.length !== 0) {
             _.each(batch, function(entry) {
-                mismatch += (looper(root, entry)) ? 0 : 1;
+                looper(root, entry, processResult)
             })
             batch = factory.getNextBatch();
         }
-        jf.writeFileSync(args[2], "Number of mismatches: " + mismatch);
+        console.log(mismatch);
         return db.closeDB();
     })
     .then(function() {}, debugErr);
