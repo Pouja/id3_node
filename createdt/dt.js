@@ -61,6 +61,7 @@ var DecisionTree = function(options) {
         });
 
         attr.split = _.pluck(names, attr.name);
+        return attr
     }
 
     /**

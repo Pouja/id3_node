@@ -1,18 +1,32 @@
 var _ = require("underscore");
 
-var looper = function(node, entry) {
+/**
+ * Walks the whole tree and checks if there is a branch that matches the entry.
+ * @param {TreeNode} node The node to be walked.
+ * @param {Object} entry A object with attributes that should match a branch in the tree.
+ * @return {boolean} true iff there is a branch that matches the entry.
+ * @methode walk
+ */
+var walk = function(node, entry) {
     if (node.data("model").class !== undefined) {
         return match(node, entry) && node.data("model").class === entry.class;
     }
 
     return _.some(node._childs, function(child) {
         if (match(child, entry)) {
-            return looper(child, entry)
+            return walk(child, entry)
         }
         return false;
     })
 }
 
+/**
+ * Checks if the current node has filters that matches the entry.
+ * @param {TreeNode} node The node.
+ * @param {Object} entry The entry object.
+ * @return {boolean}
+ * @methode match
+ */
 var match = function(node, entry) {
     var filters = node.data("model").filters;
     return _.every(filters, function(filter) {
@@ -24,5 +38,5 @@ var match = function(node, entry) {
     })
 }
 
-module.exports.looper = looper;
+module.exports.walk = walk;
 module.exports.match = match;
