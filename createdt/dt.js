@@ -4,7 +4,7 @@ var Set = require("./set.js");
 var _ = require("underscore");
 var debug = require("debug")("dt");
 var configDB = require("config").DATABASE;
-
+var jf = require("jsonfile");
 /**
  * The decision tree class.
  * @param {Object} options The options

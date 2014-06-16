@@ -9,6 +9,12 @@ var Factory = require("../common/factory.js");
  * This class only uses native code and minimal amount of functions to achieve the highest performance.
  * This class loads all ids for each split.
  */
+
+/**
+ * Holds all the ids that are mapped to classes and those are mapped to filters.
+ * @property map
+ * @type Array
+ */
 Factory.prototype.map = [];
 
 /**
@@ -16,13 +22,14 @@ Factory.prototype.map = [];
  * @method getMap
  */
 Factory.prototype.getMap = function() {
-    return map;
+    return this.map;
 }
 
 /**
  * Initializes the map with all possible splits for each attribute.
  * @param {Array} attributes The attributes.
  * @method loadMap
+ * @private
  */
 Factory.prototype.loadMap = function(attributes) {
     for (var attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
@@ -39,6 +46,7 @@ Factory.prototype.loadMap = function(attributes) {
 
 /**
  * For each entry in map, init all the ids that match the split value
+ * @private
  * @method loadIds
  */
 Factory.prototype.loadIds = function() {
@@ -66,7 +74,6 @@ Factory.prototype.loadIds = function() {
                                 class: row['class'],
                                 ids: [row['id']]
                             })
-                            console.log(filter);
                         }
                     }
                 }
@@ -96,6 +103,7 @@ Factory.prototype.loadIds = function() {
 /**
  * Initializes the factory.
  * This should be called before running the algoritme.
+ * @param {Array} attributes The attributes.
  * @method init
  */
 Factory.prototype.init = function(attributes) {
@@ -121,6 +129,8 @@ Factory.prototype.orderMap = function() {
 
 /**
  * Gets all the ids for the given filters
+ * @param {Array} filters A list of filters.
+ * @methode getIds
  */
 Factory.prototype.getIds = function(filters) {
     var result = [];
