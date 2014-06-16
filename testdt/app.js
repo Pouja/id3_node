@@ -11,8 +11,6 @@ var looper = require("./looper.js").looper;
 
 var args = process.argv.slice(2);
 
-if (!args[2])
-    throw new Error("Specify output filename.");
 if (!args[1])
     throw new Error("Specify json file for attributes.");
 if (!args[0])
@@ -39,7 +37,7 @@ db.connectDB()
             })
             batch = factory.getNextBatch();
         }
-        jf.writeFileSync(args[2], "Number of mismatches: " + mismatch);
+        console.log("Number of mismatches: " + mismatch);
         return db.closeDB();
     })
     .then(function() {}, debugErr);
